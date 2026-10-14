@@ -1,0 +1,565 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ministry of Remaining Humans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: state-poster game. Ministry bar with the live population counter, one big bordered stage (street walk or gate mini-game). Robots are cobalt and white; the human is the only orange thing in the world. Single committed light look. */
+:root{
+  color-scheme: light;
+  --paper:#eceff5;
+  --ink:#0e0f14;
+  --cobalt:#2a3fe0;
+  --sky:#b9c4ff;
+  --steel:#c3c9d6;
+  --orange:#ff5a1f;
+  --white:#ffffff;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Archivo",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px}
+#app{min-height:100%;max-width:900px;margin:0 auto;padding-inline:16px;padding-block:14px 20px;display:flex;flex-direction:column;gap:12px}
+
+/* ministry bar */
+.bar{display:flex;justify-content:space-between;align-items:stretch;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.seal{width:44px;height:44px;border-radius:50%;background:var(--ink);display:grid;place-items:center;flex:none}
+.seal i{width:16px;height:16px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px var(--ink),0 0 0 6px var(--white)}
+.brand b{font-family:var(--display);font-weight:400;font-size:clamp(1.05rem,3.4vw,1.45rem);letter-spacing:.02em;line-height:1;text-transform:uppercase;display:block}
+.brand small{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+.count{background:var(--ink);color:var(--white);padding:7px 12px;border-radius:4px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.count small{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.count b{font-family:var(--mono);font-weight:700;font-size:clamp(.95rem,3vw,1.2rem);font-variant-numeric:tabular-nums;color:var(--orange)}
+
+.status{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em}
+.lives{display:flex;gap:6px;align-items:center}
+.lives i{width:14px;height:14px;border-radius:50%;background:var(--orange);border:2px solid var(--ink)}
+.lives i.lost{background:transparent;opacity:.35}
+.years{display:flex;gap:3px}
+.years span{width:18px;height:6px;background:var(--steel)}
+.years span.d{background:var(--ink)}.years span.n{background:var(--orange)}
+
+/* stage */
+#stage{position:relative;flex:1;min-height:480px;border:3px solid var(--ink);border-radius:6px;background:var(--white);box-shadow:7px 7px 0 var(--ink);overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding:18px;gap:12px}
+.gatehead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;background:var(--cobalt);color:var(--white);padding:4px 8px}
+.tag.o{background:var(--orange);color:var(--ink)}
+h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(1.7rem,6vw,2.9rem);line-height:.95;margin:0;letter-spacing:.01em;text-wrap:balance}
+.sub{margin:0;font-weight:500;max-width:52ch}
+.hint{font-family:var(--mono);font-size:.7rem;opacity:.65;margin:0}
+.play{position:relative;flex:1;min-height:250px;border:3px solid var(--ink);background:var(--paper);overflow:hidden}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font-family:var(--display);font-weight:400;font-size:1.25rem;letter-spacing:.04em;text-transform:uppercase;padding:10px 20px;border:3px solid var(--ink);background:var(--orange);color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .06s,box-shadow .06s}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn.k{background:var(--ink);color:var(--white)}
+.btn.w{background:var(--white)}
+.btn.b{background:var(--cobalt);color:var(--white)}
+.btn:focus-visible{outline:3px solid var(--cobalt);outline-offset:3px}
+
+/* street */
+.street{position:absolute;inset:0;background:linear-gradient(var(--sky),#dfe4ff 62%,var(--steel) 62%)}
+.city{position:absolute;left:0;right:0;bottom:38%;height:46%;background-repeat:repeat-x;animation:scroll 6s linear infinite;
+  background-image:
+   linear-gradient(var(--cobalt),var(--cobalt)),linear-gradient(#3b52f0,#3b52f0),linear-gradient(var(--cobalt),var(--cobalt)),linear-gradient(#2234c4,#2234c4),linear-gradient(#3b52f0,#3b52f0);
+  background-size:400px 100%;background-position:0 100%;
+  -webkit-mask:linear-gradient(#000,#000);
+  background-image:linear-gradient(90deg,transparent 0 4%,var(--cobalt) 4% 16%,transparent 16% 20%,#3b52f0 20% 34%,transparent 34% 38%,#2234c4 38% 46%,transparent 46% 52%,var(--cobalt) 52% 70%,transparent 70% 74%,#3b52f0 74% 92%,transparent 92%)}
+.city.back{bottom:38%;height:62%;opacity:.35;animation-duration:14s;background-size:520px 100%}
+.city.front{clip-path:polygon(0 30%,100% 30%,100% 100%,0 100%)}
+.windows{position:absolute;left:0;right:0;bottom:44%;height:20%;background-image:radial-gradient(circle,#ffffffcc 1.6px,transparent 2px);background-size:22px 18px;animation:scroll 6s linear infinite;opacity:.7}
+.road{position:absolute;left:0;right:0;bottom:16%;height:5px;background-image:linear-gradient(90deg,var(--white) 0 50%,transparent 50%);background-size:60px 100%;animation:scroll 1.2s linear infinite}
+.yearbig{position:absolute;left:18px;top:12px;font-family:var(--display);font-size:clamp(4.5rem,18vw,9rem);line-height:.85;color:var(--ink);letter-spacing:-.01em}
+.news{position:absolute;left:18px;right:18px;top:clamp(84px,22vw,150px);font-family:var(--mono);font-size:.82rem;max-width:44ch;background:var(--white);border:3px solid var(--ink);padding:8px 11px;box-shadow:4px 4px 0 var(--ink)}
+.news small{display:block;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cobalt)}
+.walker{position:absolute;left:30%;bottom:20%}
+.gatebot{position:absolute;bottom:20%;right:-120px;animation:arrive 2.2s ease-out .6s forwards}
+.street .go{position:absolute;right:18px;bottom:18px}
+
+/* human sprite */
+.human{position:relative;width:34px;height:74px}
+.human .hd{position:absolute;left:5px;top:0;width:24px;height:24px;border-radius:50%;background:var(--orange);border:3px solid var(--ink)}
+.human .bd{position:absolute;left:3px;top:22px;width:28px;height:32px;border-radius:12px 12px 6px 6px;background:var(--orange);border:3px solid var(--ink)}
+.human .lg{position:absolute;top:50px;width:8px;height:24px;background:var(--ink);border-radius:4px;transform-origin:50% 0}
+.human .lg.a{left:8px}.human .lg.b{left:18px}
+.walking .human{animation:bob .4s ease-in-out infinite alternate}
+.walking .human .lg.a{animation:leg .4s ease-in-out infinite alternate}
+.walking .human .lg.b{animation:leg .4s ease-in-out infinite alternate-reverse}
+
+/* robot sprite */
+.robot{position:relative;width:70px;height:110px}
+.robot .an{position:absolute;left:33px;top:0;width:4px;height:16px;background:var(--ink)}
+.robot .an::after{content:"";position:absolute;left:-4px;top:-8px;width:12px;height:12px;border-radius:50%;background:var(--orange);border:2px solid var(--ink)}
+.robot .hd{position:absolute;left:6px;top:14px;width:58px;height:40px;background:var(--white);border:3px solid var(--ink);border-radius:8px}
+.robot .hd::after{content:"";position:absolute;left:7px;right:7px;top:10px;height:12px;background:var(--cobalt);border-radius:6px}
+.robot .bd{position:absolute;left:10px;top:52px;width:50px;height:58px;background:var(--cobalt);border:3px solid var(--ink);border-radius:6px}
+.robot .sign{position:absolute;right:-34px;top:40px;width:44px;height:44px;border-radius:50%;background:var(--white);border:3px solid var(--ink);display:grid;place-items:center;font-family:var(--display);font-size:.8rem}
+
+/* verdict stamp */
+.verdict{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:rgba(236,239,245,.9);text-align:center}
+.stampbig{font-family:var(--display);font-size:clamp(3.4rem,15vw,7rem);line-height:.9;padding:6px 22px;border:7px solid currentColor;transform:rotate(-7deg);animation:slam .35s cubic-bezier(.2,1.6,.4,1) both;text-transform:uppercase}
+.stampbig.h{color:var(--orange)}.stampbig.r{color:var(--cobalt)}
+.vnote{font-family:var(--mono);font-size:.92rem;max-width:44ch;margin:0;background:var(--white);border:3px solid var(--ink);padding:10px 14px;box-shadow:4px 4px 0 var(--ink)}
+
+/* G1 checkbox */
+.cbx{position:absolute;display:flex;align-items:center;gap:10px;background:var(--white);border:2px solid var(--steel);border-radius:4px;padding:12px 16px;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:left .18s ease-out,top .18s ease-out;cursor:pointer;white-space:nowrap}
+.cbx .box{width:26px;height:26px;border:2px solid #9aa2b1;border-radius:3px;background:var(--white)}
+.cbx.done .box{background:var(--orange);border-color:var(--ink)}
+.cbx span{font-weight:700;font-size:.95rem}
+.cbx small{font-family:var(--mono);font-size:.55rem;opacity:.5;display:block}
+.taunt{position:absolute;left:12px;bottom:12px;right:12px;font-family:var(--mono);font-size:.82rem;color:var(--cobalt);min-height:1.3em}
+
+/* G2 traffic */
+.tl{position:relative;height:100%;aspect-ratio:1;max-width:100%;margin:0 auto}
+.scene{position:absolute;inset:0;background:linear-gradient(var(--sky),#dfe4ff 58%,#8c93a0 58%)}
+.scene .pole{position:absolute;left:61%;top:33%;width:3.2%;height:67%;background:var(--ink)}
+.scene .box{position:absolute;left:55%;top:8%;width:15%;height:30%;background:var(--ink);border-radius:7px;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center}
+.scene .box i{width:58%;aspect-ratio:1;border-radius:50%}
+.scene .bld{position:absolute;left:6%;bottom:42%;width:28%;height:40%;background:var(--cobalt)}
+.grid{position:absolute;inset:0;display:grid}
+.cell{border:0;padding:0;background:transparent;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.8);cursor:pointer}
+.cell.on{background:rgba(255,90,31,.5)}
+.tlmsg{font-family:var(--mono);font-size:.78rem;color:var(--cobalt);min-height:1.3em;margin:0}
+
+/* G3 love/hate */
+.take{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:18px;text-align:center}
+.take .q{font-family:var(--display);font-size:clamp(2rem,8vw,3.6rem);text-transform:uppercase;line-height:.95;animation:pop .25s ease-out both;text-wrap:balance}
+.take .n{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6}
+.tbar{width:min(320px,80%);height:8px;background:var(--steel);overflow:hidden}
+.tbar i{display:block;height:100%;background:var(--ink);width:100%}
+.lh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.dep{font-family:var(--body);font-size:.8rem;font-weight:700;padding:6px 10px;background:transparent;border:2px dashed #8e95a3;color:#6e7584;cursor:pointer}
+
+/* G4 rain */
+.lane{cursor:none}
+.lane .human{position:absolute;bottom:8px}
+.drop{position:absolute;width:150px;background:var(--white);border:2.5px solid var(--ink);border-radius:8px;padding:6px 8px;font-size:.72rem;font-weight:700;line-height:1.2;box-shadow:3px 3px 0 var(--ink)}
+.drop small{display:block;font-family:var(--mono);font-size:.55rem;color:var(--cobalt);letter-spacing:.08em;text-transform:uppercase}
+.drop.hit{background:var(--orange)}
+.hud{position:absolute;right:10px;top:8px;font-family:var(--mono);font-size:.75rem;background:var(--white);border:2px solid var(--ink);padding:3px 8px}
+.pop{position:absolute;font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--orange);pointer-events:none;animation:rise 1s ease-out forwards;white-space:nowrap}
+
+/* G5 stand */
+.floor{position:absolute;left:0;right:0;bottom:0;height:22%;background:var(--steel);border-top:3px solid var(--ink)}
+.stander{position:absolute;left:50%;bottom:22%;transform-origin:50% 100%;transition:transform .12s}
+.meters{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase}
+.meter{width:160px;height:12px;border:2px solid var(--ink);background:var(--white)}
+.meter i{display:block;height:100%;width:0}
+.groan{position:absolute;left:50%;font-family:var(--display);font-size:1.4rem;text-transform:uppercase;color:var(--ink);background:var(--white);border:3px solid var(--ink);padding:2px 10px;transform:translateX(10px);animation:rise 1.1s ease-out forwards;pointer-events:none;white-space:nowrap}
+.hold{touch-action:none}
+
+/* G6 lineup */
+.lineup{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-around;padding:10px 6px 0;background:repeating-linear-gradient(0deg,transparent 0 29px,rgba(14,15,20,.14) 29px 30px)}
+.cand{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit}
+.cand .say{font-size:.74rem;font-weight:700;background:var(--white);border:2.5px solid var(--ink);border-radius:10px;padding:6px 8px;max-width:150px;text-align:center;line-height:1.2}
+.cand .num{font-family:var(--display);font-size:1.1rem;background:var(--ink);color:var(--white);padding:0 8px;margin-bottom:6px}
+.wig{position:absolute;left:4px;top:8px;width:62px;height:20px;background:#6b3b1f;border-radius:20px 20px 4px 4px;border:3px solid var(--ink);z-index:2}
+.stache{position:absolute;left:22px;top:42px;width:26px;height:8px;background:var(--ink);border-radius:8px 8px 2px 2px;z-index:2}
+.tie{position:absolute;left:30px;top:56px;width:10px;height:26px;background:var(--orange);clip-path:polygon(50% 0,100% 30%,60% 100%,40% 100%,0 30%);z-index:2}
+.painted .bd,.painted .hd{background:#ffb08f}
+
+/* G7 claw */
+.machine{position:absolute;inset:0;background:linear-gradient(180deg,#dfe4ff,var(--white))}
+.rail{position:absolute;left:0;right:0;top:0;height:14px;background:var(--ink)}
+.claw{position:absolute;top:14px;width:46px;transform:translateX(-50%)}
+.claw .rope{width:4px;margin:0 auto;background:var(--ink);height:30px;transition:height .7s ease-in}
+.claw .head{width:46px;height:26px;border:4px solid var(--ink);border-top-width:8px;border-radius:0 0 18px 18px;background:transparent;position:relative}
+.claw .grab{position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:30px;line-height:1}
+.pile{position:absolute;left:0;right:0;bottom:0;height:36%;background:var(--steel);border-top:3px solid var(--ink)}
+.prize{position:absolute;bottom:22%;font-size:clamp(30px,6vw,40px);transform:translateX(-50%);line-height:1}
+.prize.bolt{filter:grayscale(1);opacity:.8}
+.tries{position:absolute;right:10px;top:22px;font-family:var(--mono);font-size:.72rem;background:var(--white);border:2px solid var(--ink);padding:3px 8px}
+
+/* poster screens */
+.poster{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px;background:var(--cobalt);color:var(--white);overflow:auto}
+.poster h1{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(2.8rem,11vw,6rem);line-height:.88;margin:0;letter-spacing:.005em}
+.poster h1 em{font-style:normal;color:var(--orange)}
+.poster p{margin:0;max-width:46ch;font-size:1rem;font-weight:500;line-height:1.45}
+.poster .fine{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.poster .btn{align-self:flex-start}
+.poster .human{position:absolute;right:28px;bottom:24px;transform:scale(1.6);transform-origin:100% 100%}
+.poster.end{background:var(--orange);color:var(--ink)}
+.poster.bot{background:var(--ink)}
+.certno{font-family:var(--mono);font-size:.8rem;border:3px solid currentColor;padding:6px 10px;align-self:flex-start}
+
+/* juice + art pass */
+.play,.street::after{background-image:radial-gradient(rgba(14,15,20,.13) 1px,transparent 1.5px);background-size:7px 7px}
+.street::after{content:"";position:absolute;inset:0;pointer-events:none}
+h2{text-shadow:3px 3px 0 var(--orange)}
+.yearbig{text-shadow:5px 5px 0 var(--orange)}
+.poster h1{text-shadow:4px 4px 0 var(--ink)}
+.human .hd::before{content:"";position:absolute;left:4px;top:7px;width:4px;height:4px;border-radius:50%;background:var(--ink);box-shadow:8px 0 0 var(--ink)}
+.human .hd::after{content:"";position:absolute;left:6px;top:14px;width:8px;height:3px;border-radius:0 0 4px 4px;background:var(--ink)}
+.heckler{position:absolute;right:10px;top:10px;z-index:8;display:flex;flex-direction:row-reverse;align-items:flex-start;gap:6px;pointer-events:none;max-width:72%}
+.heckler .face{flex:none;width:46px;height:36px;background:var(--white);border:3px solid var(--ink);border-radius:9px;position:relative;box-shadow:3px 3px 0 var(--ink)}
+.heckler .face::after{content:"";position:absolute;left:6px;right:6px;top:9px;height:10px;border-radius:5px;background:var(--cobalt);animation:visor 3s steps(1) infinite}
+.heckler .bub{background:var(--cobalt);color:var(--white);font-family:var(--mono);font-size:.76rem;font-weight:700;line-height:1.3;padding:7px 10px;border:3px solid var(--ink);border-radius:12px 2px 12px 12px;animation:pop .22s cubic-bezier(.2,1.6,.4,1) both}
+.conf{position:absolute;width:9px;height:13px;z-index:30;pointer-events:none;border:1.5px solid var(--ink)}
+.squash{animation:squash .3s cubic-bezier(.2,1.6,.4,1)}
+.mute{font:inherit;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:2px solid var(--ink);padding:3px 8px;cursor:pointer;color:var(--ink)}
+.play .hud{right:auto;left:10px;z-index:6}
+.cookie{position:absolute;z-index:3;background:var(--white);border:3px solid var(--ink);border-radius:10px;padding:10px 11px;box-shadow:4px 4px 0 var(--ink);display:flex;flex-direction:column;gap:8px}
+.cookie p{margin:0;font-size:.8rem;font-weight:700;line-height:1.25}
+.cbtns{display:flex;gap:6px;flex-wrap:wrap}
+.cacc{font-family:var(--display);font-size:1rem;letter-spacing:.03em;text-transform:uppercase;background:var(--orange);border:2.5px solid var(--ink);padding:5px 10px;cursor:pointer;color:var(--ink)}
+.cman{font:inherit;font-size:.68rem;background:transparent;border:0;text-decoration:underline;color:#6e7584;cursor:pointer;padding:4px}
+.cacc:active{transform:translate(2px,2px)}
+.room{position:absolute;left:10px;right:110px;top:44px;bottom:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.spot{position:relative;font:inherit;background:var(--white);border:3px solid var(--ink);border-radius:10px;box-shadow:3px 3px 0 var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;color:var(--ink)}
+.spot span{font-size:clamp(22px,5vw,34px);line-height:1}
+.spot small{font-size:.66rem;font-weight:700}
+.spot:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.find{position:absolute;left:50%;top:-6px;transform:translateX(-50%);background:var(--orange);border:2.5px solid var(--ink);font-size:.72rem;font-weight:800;padding:3px 8px;white-space:nowrap;z-index:4;animation:rise 1.2s ease-out forwards;pointer-events:none}
+.me-phone{position:absolute;right:28px;bottom:16px;background:none;border:0;padding:0;cursor:pointer}
+.me-phone .human{transform:scale(1.25);transform-origin:50% 100%}
+.phone{position:absolute;right:-12px;bottom:46px;width:12px;height:20px;background:var(--ink);border-radius:3px;border:2px solid var(--ink);box-shadow:inset 0 0 0 2px #5d6ae8}
+.call{position:absolute;left:10px;right:10px;top:50px;bottom:56px;display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.tile{position:relative;background:#1b1d26;border:3px solid var(--ink);border-radius:10px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:22px;overflow:hidden;min-width:0}
+.tile .nm{position:absolute;left:8px;bottom:5px;font-family:var(--mono);font-size:.62rem;color:var(--white);background:rgba(0,0,0,.5);padding:1px 6px}
+.tile.you{background:#2a2d3a}
+.tiebar{position:absolute;left:30px;top:56px;width:10px;height:28px;background:var(--orange);clip-path:polygon(50% 0,100% 30%,60% 100%,40% 100%,0 30%)}
+.joke{position:absolute;left:8px;right:8px;top:8px;background:var(--white);border:2.5px solid var(--ink);border-radius:10px;padding:6px 9px;font-size:.78rem;font-weight:700;line-height:1.25}
+.haha{position:absolute;left:6px;right:6px;top:10px;text-align:center;font-family:var(--display);color:var(--orange);font-size:1.2rem;word-break:break-all;line-height:1}
+.lmeter{position:absolute;left:10px;right:10px;bottom:12px;height:30px;border:3px solid var(--ink);background:var(--white);display:flex}
+.lmeter .z{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em}
+.lmeter .rude{left:4px}.lmeter .creepy{right:4px}
+.lmeter .ok{background:var(--orange);border-left:2px solid var(--ink);border-right:2px solid var(--ink);color:var(--ink);font-weight:700;z-index:1}
+.lmeter i{position:absolute;left:0;top:0;bottom:0;background:rgba(42,63,224,.45);z-index:2;border-right:3px solid var(--cobalt)}
+.side{background-color:#d9dee8}
+.lanes{position:absolute;inset:44px 10px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.lanes i{background:repeating-linear-gradient(0deg,#cfd4de 0 26px,#c3c9d4 26px 28px);border:2px solid var(--ink)}
+.walker2{position:absolute;transform:translateX(-50%);transition:left .14s ease-out,opacity .3s}
+.walker2 .robot{transform:scale(.7);transform-origin:50% 0}
+.walker2.me{bottom:12px}
+#them{top:0}
+.door{position:absolute;right:8px;bottom:22px;width:56px;height:110px;background:var(--cobalt);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;color:var(--white);font-family:var(--mono);font-size:.62rem;text-transform:uppercase}
+.grocer{position:absolute;left:42%;bottom:22px;transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center}
+.stack{display:flex;flex-direction:column-reverse;align-items:center;font-size:24px;line-height:1.05;margin-bottom:-6px}
+.dist{position:absolute;left:10px;right:76px;bottom:8px;height:8px;border:2px solid var(--ink);background:var(--white)}
+.dist i{display:block;height:100%;width:0;background:var(--orange)}
+.plate{position:absolute;left:50%;bottom:16%;width:min(60%,280px);height:34px;transform:translateX(-50%);border-radius:50%;background:var(--white);border:3px solid var(--ink)}
+.croi{--s:1;position:absolute;left:50%;bottom:20%;transform:translateX(-50%) scale(var(--s));transform-origin:50% 100%;font-size:clamp(90px,22vw,150px);line-height:1;background:none;border:0;cursor:pointer;padding:0;transition:transform .12s}
+.crumb{position:absolute;left:0;top:0;width:6px;height:5px;background:#d99a4e;border:1px solid #8a5524;border-radius:2px;pointer-events:none;z-index:2}
+@keyframes visor{0%,92%{transform:scaleY(1)}93%,100%{transform:scaleY(.15)}}
+@keyframes squash{0%{transform:scale(1.35,.65)}100%{transform:scale(1)}}
+@keyframes scroll{to{background-position-x:-400px}}
+@keyframes bob{to{transform:translateY(-4px)}}
+@keyframes leg{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
+@keyframes arrive{to{right:16%}}
+@keyframes slam{0%{transform:rotate(-7deg) scale(2.4);opacity:0}100%{transform:rotate(-7deg) scale(1);opacity:1}}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{0%{opacity:0;transform:translate(10px,0)}20%{opacity:1}100%{opacity:0;transform:translate(10px,-50px)}}
+@media (prefers-reduced-motion:reduce){.city,.windows,.road,.walking .human,.walking .human .lg{animation:none!important}}
+@media (max-width:560px){.screen{padding:14px}.btn{font-size:1.05rem;padding:9px 14px}.cand .say{max-width:100px;font-size:.66rem}.robot{transform:scale(.8);transform-origin:50% 100%}}
+</style>
+
+<div id="app">
+  <div class="bar">
+    <div class="brand"><span class="seal"><i></i></span><div><b>Ministry of Remaining Humans</b><small>Croissant access program</small></div></div>
+    <div class="count"><small>Remaining humans</small><b id="pop">8,100,000,000</b></div>
+  </div>
+  <div class="status"><div class="lives" id="lives"></div><div class="row" style="gap:12px"><div class="years" id="years"></div><button class="mute" id="mute">Sound on</button></div></div>
+  <div id="stage"></div>
+</div>
+
+<script>
+(() => {
+const $=s=>document.querySelector(s), stage=$('#stage');
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const HUMAN='<div class="human"><span class="lg a"></span><span class="lg b"></span><span class="bd"></span><span class="hd"></span></div>';
+const ROBOT=(extra='',cls='')=>`<div class="robot ${cls}"><span class="an"></span><span class="hd"></span><span class="bd"></span>${extra}</div>`;
+
+const S={lives:3,lvl:0,gen:0,timers:[],pop:8.1e9,popTarget:8.1e9};
+function later(fn,ms){ const g=S.gen; S.timers.push(setTimeout(()=>{ if(g===S.gen) fn(); },ms)); }
+function every(fn,ms){ const g=S.gen; const id=setInterval(()=>{ if(g===S.gen) fn(); else clearInterval(id); },ms); S.timers.push(id); }
+function loop(fn){ const g=S.gen; let last=performance.now(); const f=t=>{ if(g!==S.gen) return; const dt=Math.min(.05,(t-last)/1000); last=t; if(fn(dt,t)!==false) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+function reset(){ S.gen++; S.timers.forEach(t=>{clearTimeout(t);clearInterval(t);}); S.timers=[]; }
+
+/* ---------- juice: sound, shake, confetti, heckler ---------- */
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let AC=null, muted=false;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(AC.state==='suspended') AC.resume(); return AC; }
+function tone(f,d,type='square',v=.06,slide=0,delay=0){ const a=ac(); if(!a||muted) return; const t=a.currentTime+delay;
+  const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.setValueAtTime(f,t);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f*slide),t+d);
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+d+.03); }
+const SFX={
+  click:()=>tone(620,.05,'square',.04),
+  whoosh:()=>tone(1200,.2,'sawtooth',.035,.25),
+  beep:()=>{ tone(880,.07,'square',.03); tone(1320,.07,'square',.03,0,.08); },
+  human:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.09,0,i*.09)),
+  bot:()=>{ tone(160,.5,'sawtooth',.09,.55); tone(120,.5,'square',.05,.55); },
+  hit:()=>tone(260,.12,'square',.07,.45),
+  groan:()=>tone(130+Math.random()*70,.45,'sawtooth',.045,.65),
+  crack:()=>{ tone(2000,.04,'square',.07,.2); tone(90,.3,'triangle',.12,.5,.03); },
+  whirr:()=>tone(240,.75,'sawtooth',.03,1.8),
+  grab:()=>tone(420,.12,'square',.06,1.6),
+};
+$('#mute').onclick=()=>{ muted=!muted; $('#mute').textContent=muted?'Sound off':'Sound on'; };
+document.addEventListener('pointerdown',e=>{ if(e.target.closest('.btn')) SFX.click(); },true);
+
+let trauma=0;
+(function shakeLoop(){ if(trauma>0){ trauma=Math.max(0,trauma-.025); const s=trauma*trauma, t=performance.now()/1000*32;
+    stage.style.transform=`translate(${12*s*Math.sin(t*1.7)}px,${8*s*Math.sin(t*2.3)}px) rotate(${1.4*s*Math.sin(t*1.1)}deg)`; }
+  else if(stage.style.transform) stage.style.transform=''; requestAnimationFrame(shakeLoop); })();
+const shake=a=>{ if(!reduce) trauma=Math.min(1,trauma+a); };
+
+function burst(x,y,n=46){ if(reduce) return; const cols=['#ff5a1f','#2a3fe0','#ffffff','#ff5a1f']; const ps=[];
+  for(let i=0;i<n;i++){ const d=document.createElement('div'); d.className='conf'; d.style.background=cols[i%cols.length]; stage.appendChild(d);
+    const a=Math.random()*Math.PI*2, v=180+Math.random()*420; ps.push({d,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-260,r:Math.random()*360,vr:(Math.random()-.5)*900}); }
+  let last=performance.now(), life=1.6;
+  const f=t=>{ const dt=Math.min(.05,(t-last)/1000); last=t; life-=dt;
+    for(const p of ps){ p.vy+=900*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.r+=p.vr*dt; p.d.style.transform=`translate(${p.x}px,${p.y}px) rotate(${p.r}deg)`; p.d.style.opacity=Math.min(1,life*1.5); }
+    if(life>0) requestAnimationFrame(f); else ps.forEach(p=>p.d.remove()); };
+  requestAnimationFrame(f); }
+
+function heckler(host){ const h=document.createElement('div'); h.className='heckler'; h.innerHTML='<span class="face"></span><span class="bub" hidden></span>'; host.appendChild(h);
+  const b=h.querySelector('.bub'); let tm;
+  return (txt,quiet)=>{ b.hidden=false; b.textContent=txt; b.style.animation='none'; void b.offsetWidth; b.style.animation=''; if(!quiet) SFX.beep();
+    clearTimeout(tm); tm=setTimeout(()=>{ b.hidden=true; },2600); }; }
+function squash(el){ el.classList.remove('squash'); void el.offsetWidth; el.classList.add('squash'); }
+
+/* population counter: always drifting down */
+(function tick(){ if(S.popTarget>100) S.popTarget-=S.popTarget*0.0000006+Math.random()*3; S.pop += (S.popTarget-S.pop)*0.04;
+  $('#pop').textContent = S.popTarget<=1 && S.pop<1.5 ? '1 (you)' : fmt(S.pop); requestAnimationFrame(tick); })();
+
+function chrome(){
+  $('#lives').innerHTML='Lives '+[0,1,2].map(i=>`<i class="${i<S.lives?'':'lost'}"></i>`).join('');
+  $('#years').innerHTML=GATES.map((g,i)=>`<span class="${i<S.lvl?'d':i===S.lvl?'n':''}"></span>`).join('');
+}
+function screen(html){ stage.innerHTML=`<div class="screen">${html}</div>`; return stage.firstChild; }
+function gateHead(g){ return `<div class="gatehead"><span class="tag">Gate ${S.lvl+1} of ${GATES.length} · ${g.year}</span><span class="tag o">${g.tag}</span></div><h2>${g.title}</h2><p class="sub">${g.sub}</p>`; }
+
+/* ---------------- gates ---------------- */
+const GATES=[
+{year:2026, pop:8.1e9, tag:'Classic check', news:'Bots pass humans in internet traffic. Everyone shrugs and keeps scrolling.',
+ title:'I’m not a robot', sub:'Tick the box. Easy.',
+ run(done){
+  const el=screen(gateHead(this)+`<div class="play" id="p"><div class="cbx" id="c"><span class="box"></span><span>I’m not a robot<small>Ministry verification</small></span></div><div class="taunt" id="t"></div></div>`);
+  const p=$('#p'), c=$('#c'), say=heckler(p); let flees=0, tired=false;
+  const t={set textContent(v){ say(v); }};
+  say('Go on, citizen. Tick it.',true);
+  const lines=['Are you sure?','How do you know?','Have you ever actually checked?','Robots also say that.','Okay, okay. It’s tired.'];
+  const place=(x,y)=>{ const W=p.clientWidth-c.offsetWidth-10, H=p.clientHeight-c.offsetHeight-40; c.style.left=Math.max(8,Math.min(W,x))+'px'; c.style.top=Math.max(8,Math.min(H,y))+'px'; };
+  place((p.clientWidth-c.offsetWidth)/2,(p.clientHeight-c.offsetHeight)/2-20);
+  let lf=0;
+  const flee=()=>{ if(tired) return; const nw=performance.now(); if(nw-lf<380) return; lf=nw; flees++; SFX.whoosh(); squash(c); t.textContent=lines[Math.min(flees-1,lines.length-1)];
+    place(Math.random()*p.clientWidth, Math.random()*p.clientHeight);
+    if(flees>=5){ tired=true; c.style.transition='left 1s, top 1s'; } };
+  p.addEventListener('pointermove',e=>{ if(tired) return; const r=c.getBoundingClientRect(); const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    if(Math.hypot(e.clientX-cx,e.clientY-cy)<90) flee(); });
+  c.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!tired) return flee(); c.classList.add('done'); t.textContent='Fine. FINE.'; later(()=>done(true,'The checkbox gave up before you did. Persistence is a human trait. For now.'),700); });
+ }},
+{year:2027, pop:6.2e9, tag:'Reflex check', news:'Bots now read every privacy policy in 0.02 seconds. Humans have never read one.',
+ title:'Accept all cookies', sub:'Humans accept without reading. Smash “Accept all” on 10 banners in 12 seconds.',
+ run(done){
+  const T=['We value your privacy. Mostly.','This site uses cookies, crumbs and vibes.','We and our 1,442 partners would like to know everything.','Cookies help us know you better than your mother.','By breathing near this page you agree to cookies.','We updated our terms. Again. Nobody noticed.','Essential cookies only (all of them are essential).','Allow us to sell your data to a nicer company?'];
+  screen(gateHead(this)+`<div class="play" id="p"><div class="hud" id="h">Accepted 0/10 · 12s</div></div>`);
+  const p=$('#p'), h=$('#h'), say=heckler(p); let n=0, left=12, spawn=.2, live=0, over=false;
+  say('Read carefully, citizen.',true);
+  const ACC=['Didn’t even read it. Perfect.','Yes. Accept. Consume.','Your data thanks you.','Faster!','Wow, zero hesitation.'];
+  const add=()=>{ if(live>=4) return; live++;
+    const W=p.clientWidth, H=p.clientHeight, bw=Math.min(230,W-20);
+    const d=document.createElement('div'); d.className='cookie';
+    d.style.width=bw+'px'; d.style.left=(10+Math.random()*(W-bw-20))+'px'; d.style.top=(46+Math.random()*Math.max(10,H-170))+'px';
+    const swap=Math.random()<.3;
+    const acc='<button class="cacc">Accept all</button>', man='<button class="cman">Manage preferences</button>';
+    d.innerHTML=`<p>🍪 ${pick(T)}</p><div class="cbtns">${swap?man+acc:acc+man}</div>`;
+    p.appendChild(d); squash(d);
+    d.querySelector('.cacc').onclick=()=>{ if(over) return; n++; live--; SFX.hit(); shake(.12);
+      const r=d.getBoundingClientRect(), sr=stage.getBoundingClientRect(); burst(r.left-sr.left+r.width/2, r.top-sr.top+20, 10);
+      d.remove(); if(n%2===0) say(pick(ACC),true); h.textContent=`Accepted ${n}/10 · ${Math.ceil(left)}s`;
+      if(n>=10){ over=true; done(true,`Ten cookie banners accepted in ${(12-left).toFixed(1)} seconds without reading a single word. Unmistakably human.`); } };
+    d.querySelector('.cman').onclick=()=>{ if(over) return; d.innerHTML='<p>Loading 1,442 partners… <b>3%</b></p>'; say('Nobody has ever clicked that. Suspicious.'); shake(.25);
+      setTimeout(()=>{ if(d.isConnected){ d.remove(); live--; } },1600); };
+  };
+  loop(dt=>{ if(over) return false; left-=dt; spawn-=dt; if(spawn<=0){ spawn=.45+Math.random()*.35; add(); }
+    h.textContent=`Accepted ${n}/10 · ${Math.max(0,Math.ceil(left))}s`;
+    if(left<=0){ over=true; done(false, n>=6?`Only ${n} banners accepted. You hesitated. Hesitation means reading. Reading means bot.`:`${n} banners in 12 seconds. You were reading the terms, weren’t you. Only bots read the terms.`); return false; } });
+ }},
+{year:2028, pop:4.1e9, tag:'Politeness check', news:'Robots never fake a laugh. They either find it funny or they file a report.',
+ title:'Laugh at your boss’s joke', sub:'Hold to laugh. Let go inside the polite zone. Too short is rude. Too long is creepy.',
+ run(done){
+  const J=['Why did the spreadsheet break up with the calculator? It felt used. Like Q3.','I asked the AI for a raise. It gave me a summary of my raise.','Our synergy is so aligned, it’s basically a circle.','I’m not saying I’m a great boss. My KPIs are saying it.','Let’s take this offline. Like my personality.'];
+  const jokes=shuffle(J).slice(0,3);
+  screen(gateHead(this)+`<div class="play" id="p"><div class="call">
+      <div class="tile boss">${ROBOT('<span class="tiebar"></span>')}<span class="nm">Boss (robot)</span><div class="joke" id="jk"></div></div>
+      <div class="tile you"><div id="you">${HUMAN}</div><span class="nm">You</span><div class="haha" id="hh"></div></div></div>
+    <div class="lmeter"><span class="z rude">Rude</span><span class="z ok" id="ok">Polite</span><span class="z creepy">Creepy</span><i id="lf"></i></div></div>
+    <div class="row"><button class="btn hold" id="hold">Hold to laugh</button><span class="hint" id="sc">Joke 1 of 3</span></div>`);
+  const p=$('#p'), jk=$('#jk'), hh=$('#hh'), lf=$('#lf'), ok=$('#ok'), sc=$('#sc'), hb=$('#hold'), say=heckler(p), G=S.gen;
+  let j=0, good=0, val=0, holding=false, ready=false, lo=0, hi=0, hT=0;
+  const setJoke=()=>{ jk.textContent='“'+jokes[j]+'”'; squash(jk); val=0; lf.style.width='0%'; hh.textContent='';
+    const w=13+Math.random()*6; lo=18+Math.random()*(62-w); hi=lo+w; ok.style.left=lo+'%'; ok.style.width=w+'%';
+    sc.textContent=`Joke ${j+1} of 3`; ready=false; later(()=>{ ready=true; },700); };
+  const release=()=>{ if(!holding||G!==S.gen) return; holding=false; ready=false;
+    let r; if(val<lo){ r='rude'; say(pick(['…was that not funny?','Noted. In your file.','Wow. Okay.'])); shake(.3); }
+    else if(val>hi){ r='creepy'; say(pick(['Okay, that’s enough.','Are you… okay?','HR has been notified.'])); shake(.3); }
+    else { r='ok'; good++; say(pick(['See? I’m hilarious.','Finally, someone gets me.','Promotion pending.'])); burst(stage.clientWidth/2, stage.clientHeight*.45, 14); }
+    hh.textContent= r==='ok'?'haha… good one':r==='rude'?'heh.':'HAHAHAHA HA HA ha… ha';
+    later(()=>{ j++; if(j<3) return setJoke();
+      if(good>=2) done(true,`You fake-laughed correctly ${good} out of 3 times. Insincere, well-timed, deeply human.`);
+      else done(false, good?'Only one acceptable fake laugh. Robots can’t fake it, but neither can you, apparently.':'Zero polite laughs. You have either no manners or no social battery. Flagged.'); },1300); };
+  hb.addEventListener('pointerdown',e=>{ e.preventDefault(); if(ready) holding=true; });
+  window.addEventListener('pointerup',release); hb.addEventListener('pointerleave',release);
+  window.addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat&&G===S.gen){ e.preventDefault(); if(ready) holding=true; } });
+  window.addEventListener('keyup',e=>{ if(e.code==='Space') release(); });
+  setJoke();
+  loop(dt=>{ if(holding){ val=Math.min(100,val+dt*38); hT-=dt; if(hT<=0){ hT=.16; tone(380+Math.random()*260,.07,'triangle',.05); }
+      hh.textContent= val<lo?'heh':val<hi?'haha':'HAHAHA'.repeat(1+Math.floor((val-hi)/12)); if(val>=100) release(); }
+    lf.style.width=val+'%'; });
+ }},
+{year:2029, pop:2.3e9, tag:'Sidewalk check', news:'Delivery robots now use the sidewalk too. They also do the awkward dance.',
+ title:'The sidewalk dance', sub:'Someone is walking toward you. They copy every step. Switch lanes at the last second. Get past 2 of 3.',
+ run(done){
+  screen(gateHead(this)+`<div class="play side" id="p"><div class="lanes"><i></i><i></i><i></i></div>
+     <div class="walker2" id="them">${ROBOT()}</div><div class="walker2 me" id="me">${HUMAN}</div><div class="hud" id="h">Passed 0 · Bumped 0</div></div>
+    <div class="row"><button class="btn w" id="L">◀ Left</button><button class="btn w" id="R">Right ▶</button><span class="hint">or arrow keys</span></div>`);
+  const p=$('#p'), them=$('#them'), me=$('#me'), h=$('#h'), say=heckler(p), G=S.gen;
+  let lane=1, tl=1, ty=0, react=.42, pend=null, passed=0, bumped=0, round=0, busy=false, dir=0;
+  const X=l=>(17+l*33)+'%';
+  const move=d=>{ if(busy||G!==S.gen) return; const nl=Math.max(0,Math.min(2,lane+d)); if(nl===lane) return; lane=nl; me.style.left=X(lane); SFX.click();
+    clearTimeout(pend); pend=setTimeout(()=>{ if(G!==S.gen||busy) return; tl=lane; them.style.left=X(tl); },react*1000); };
+  $('#L').onclick=()=>move(-1); $('#R').onclick=()=>move(1);
+  const kd=e=>{ if(G!==S.gen) return; if(e.key==='ArrowLeft'){ e.preventDefault(); move(-1);} if(e.key==='ArrowRight'){ e.preventDefault(); move(1);} };
+  window.addEventListener('keydown',kd);
+  const start=()=>{ busy=false; ty=0; tl=lane; them.style.left=X(tl); them.style.top='0%'; them.style.opacity=1;
+    say(['Just walk through them. Robots do.','This one’s fast. Careful.','Last one. Commit to a side.'][round],true); };
+  me.style.left=X(lane); start();
+  loop(dt=>{ if(busy) return; ty+=dt/(3.6-round*.35); them.style.top=(ty*62)+'%';
+    if(ty>=1){ busy=true; clearTimeout(pend);
+      if(tl===lane){ bumped++; shake(.6); SFX.hit(); say('“Sorry!” “No, sorry!” “Sorry!”'); them.style.top='58%'; }
+      else { passed++; SFX.whoosh(); them.style.opacity=.2; them.style.top='90%'; say(pick(['Smooth.','Clean escape.','They’ll think about this all day.'])); }
+      h.textContent=`Passed ${passed} · Bumped ${bumped}`; round++;
+      if(passed>=2||bumped>=2||round>=3){ later(()=>{ window.removeEventListener('keydown',kd);
+          passed>=2? done(true,`You got past ${passed} of 3 sidewalk strangers after a deeply awkward dance. Profoundly human.`)
+                   : done(false,'You bumped into them twice and said sorry six times. Wait, that’s very human… but you’re still standing on the sidewalk. Try again.'); },1100); }
+      else later(start,1100); }
+  });
+ }},
+{year:2031, pop:8.8e8, tag:'Pride check', news:'Robots carry groceries in 14 trips. Humans have never once made a second trip.',
+ title:'Carry all the groceries in one trip', sub:'Bags keep piling up. Move left and right to keep the stack upright until you reach the door.',
+ run(done){
+  const ITEMS=['🛍️','🥫','🍞','🧃','🥚','🍉','🧻','🍾','🥖','🧀','🎂','🪴'];
+  screen(gateHead(this)+`<div class="play side" id="p"><div class="door"><span>Door</span></div><div class="grocer" id="g"><div class="stack" id="st"></div>${HUMAN}</div>
+     <div class="hud" id="h">Door: 0%</div><div class="dist"><i id="ds"></i></div></div>
+    <div class="row"><button class="btn w hold" id="L">◀ Lean</button><button class="btn w hold" id="R">Lean ▶</button><span class="hint" id="f">Drag, use arrows, or hold buttons</span></div>`);
+  const p=$('#p'), st=$('#st'), g=$('#g'), h=$('#h'), ds=$('#ds'), f=$('#f'), say=heckler(p), G=S.gen;
+  let th=0, noise=0, input=0, prog=0, bags=2, falls=0, addT=1.2, ptr=null, keyIn=0, btnIn=0;
+  const render=()=>{ st.innerHTML=Array.from({length:bags},(_,i)=>`<span>${ITEMS[i%ITEMS.length]}</span>`).join(''); };
+  render(); say('You could just make two trips.',true);
+  p.addEventListener('pointermove',e=>{ const r=p.getBoundingClientRect(); ptr=Math.max(-1,Math.min(1,(e.clientX-r.left-r.width/2)/(r.width/2))); });
+  p.addEventListener('pointerleave',()=>ptr=null);
+  const kd=e=>{ if(G!==S.gen) return; if(e.key==='ArrowLeft') keyIn=e.type==='keydown'?-1:0; if(e.key==='ArrowRight') keyIn=e.type==='keydown'?1:0; };
+  window.addEventListener('keydown',kd); window.addEventListener('keyup',kd);
+  const hold=(id,v)=>{ const b=$(id); b.addEventListener('pointerdown',e=>{ e.preventDefault(); btnIn=v; }); b.addEventListener('pointerup',()=>btnIn=0); b.addEventListener('pointerleave',()=>btnIn=0); };
+  hold('#L',-1); hold('#R',1);
+  const TWO=['Two trips. Just two.','The eggs are worried.','No one is watching. Make two trips.','Pride is heavy, huh.'];
+  loop(dt=>{
+    input = btnIn || keyIn || (ptr ?? 0);
+    noise += (Math.random()-.5)*dt*160; noise*= .96;
+    const a=.55+bags*.09;
+    th += (th*a + noise*.35 + input*70)*dt;
+    prog += dt*100/16; addT-=dt;
+    if(addT<=0 && bags<12){ addT=1.4; bags++; render(); squash(st); SFX.click(); if(bags%3===0) say(pick(TWO)); }
+    if(Math.abs(th)>42){ falls++; shake(.8); SFX.crack(); say(falls<3?'You dropped the eggs.':'Everything is on the floor.'); f.textContent=`Dropped it all: ${falls}/3`;
+      th=0; noise=0; bags=Math.max(2,bags-3); render();
+      if(falls>=3){ window.removeEventListener('keydown',kd); window.removeEventListener('keyup',kd); done(false,'You dropped everything three times and still refused to make two trips. Honestly, very human. But the eggs didn’t make it.'); return false; } }
+    g.style.transform=`translateX(-50%) rotate(${th}deg)`;
+    ds.style.width=Math.min(100,prog)+'%'; h.textContent=`Door: ${Math.min(100,Math.floor(prog))}%`;
+    if(prog>=100){ window.removeEventListener('keydown',kd); window.removeEventListener('keyup',kd);
+      done(true,`You carried ${bags} items in one trip, including a watermelon, with ${falls} disaster${falls===1?'':'s'}. Two trips were never an option.`); return false; }
+  });
+ }},
+{year:2037, pop:1, tag:'Final gate', news:'The last bakery keeps a list of human customers. There is one name on it.',
+ title:'Eat the last croissant', sub:'Robots eat with zero crumbs. Prove you’re human. Tap the croissant to eat it.',
+ run(done){
+  screen(gateHead(this)+`<div class="play" id="p"><div class="hud" id="h">Crumbs: 0</div><div class="plate"></div><button class="croi" id="c" aria-label="Croissant">🥐</button></div>
+    <div class="row"><span class="hint" id="m">Tap fast. Bite as messily as you can.</span></div>`);
+  const p=$('#p'), c=$('#c'), h=$('#h'), say=heckler(p); let bites=0, crumbs=0; const N=18;
+  say('Please. Use a plate.',true);
+  const PANIC=['The crumbs. Oh no.','There are crumbs in my sensors.','Sir. Madam. Human. PLEASE.','I will need to be rebooted.','This is a disaster. A beautiful disaster.'];
+  const crumbBurst=(x,y,n)=>{ if(reduce) return; const ps=[]; for(let i=0;i<n;i++){ const d=document.createElement('div'); d.className='crumb'; p.appendChild(d);
+      const a=Math.random()*Math.PI*2, v=120+Math.random()*320; ps.push({d,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-200,ground:p.clientHeight-8-Math.random()*20}); }
+    let last=performance.now(); const f=t=>{ const dt=Math.min(.05,(t-last)/1000); last=t; let moving=false;
+      for(const q of ps){ if(q.y<q.ground){ q.vy+=1000*dt; q.x+=q.vx*dt; q.y=Math.min(q.ground,q.y+q.vy*dt); moving=true; } q.d.style.transform=`translate(${q.x}px,${q.y}px)`; }
+      if(moving) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+  c.onclick=e=>{ bites++; const add=30+Math.floor(Math.random()*90)+bites*6; crumbs+=add; h.textContent='Crumbs: '+crumbs.toLocaleString('en-US');
+    const r=c.getBoundingClientRect(), pr=p.getBoundingClientRect(); crumbBurst(r.left-pr.left+r.width/2, r.top-pr.top+r.height/2, 10+Math.min(20,bites));
+    tone(180+Math.random()*120,.06,'square',.05,.6); shake(.15+bites*.01);
+    c.style.setProperty('--s', Math.max(.25,1-bites/N*.75));
+    if(bites%4===0) say(PANIC[Math.min(PANIC.length-1,bites/4-1)]);
+    if(bites>=N){ c.disabled=true; c.style.visibility='hidden'; later(()=>done(true,`You produced ${crumbs.toLocaleString('en-US')} crumbs from one croissant. No robot has ever done this. You are certified human.`),500); } };
+ }},
+];
+
+/* ---------------- flow ---------------- */
+function intro(){
+  reset(); S.lives=3; S.lvl=0; S.popTarget=8.1e9; S.pop=8.1e9; chrome();
+  stage.innerHTML=`<div class="poster"><span class="fine">Public notice · Croissant access program</span>
+    <h1>Prove you are<br><em>still human</em>.</h1>
+    <p>Bots already outnumber humans online. It only gets worse. From 2026 to 2037, AI becomes perfect, and the only way to pass the Ministry’s gates is to be <b>imperfect</b>.</p>
+    <p>You just want a croissant.</p>
+    <span class="fine">6 gates · 3 lives · Remaining humans: dropping</span>
+    <button class="btn" id="go">Start walking</button>${HUMAN}</div>`;
+  $('#go').onclick=()=>{ ac(); walk(); };
+}
+
+function walk(){
+  reset(); chrome(); const g=GATES[S.lvl]; S.popTarget=g.pop;
+  stage.innerHTML=`<div class="street walking"><div class="city back"></div><div class="city front"></div><div class="windows"></div><div class="road"></div>
+    <div class="yearbig">${g.year}</div><div class="news"><small>Ministry bulletin</small>${g.news}</div>
+    <div class="walker">${HUMAN}</div><div class="gatebot">${ROBOT('<span class="sign">STOP</span>')}</div>
+    <button class="btn go" id="go">Approach gate</button></div>`;
+  $('#go').onclick=play; later(()=>{ const b=$('#go'); if(b) b.focus(); },300);
+}
+
+function play(){
+  reset(); chrome(); const g=GATES[S.lvl]; let fired=false;
+  g.run.call(g,(pass,note)=>{ if(fired) return; fired=true; reset(); verdict(g,pass,note); });
+}
+
+function verdict(g,pass,note){
+  if(!pass) S.lives--; chrome();
+  const last=S.lvl===GATES.length-1, dead=!pass&&S.lives<=0;
+  const v=document.createElement('div'); v.className='verdict';
+  v.innerHTML=`<div class="stampbig ${pass?'h':'r'}">${pass?'Human':'Bot'}</div><p class="vnote">${note}</p>
+    <div class="row" style="justify-content:center"><button class="btn ${pass?'':'b'}" id="nx">${pass?(last?'Eat croissant':'Keep walking'):dead?'Hear the verdict':'Try again'}</button></div>
+    ${!pass&&!dead?`<p class="hint">−1 life · ${S.lives} left</p>`:''}`;
+  stage.appendChild(v); const nx=$('#nx'); nx.focus();
+  if(pass){ SFX.human(); burst(stage.clientWidth/2, stage.clientHeight*.35); } else { SFX.bot(); shake(.9); }
+  nx.onclick=()=>{ if(dead) return gameOver(); if(!pass) return play(); if(last) return ending(); S.lvl++; walk(); };
+}
+
+function gameOver(){
+  reset(); S.popTarget=Math.max(1,S.popTarget-1); chrome();
+  stage.innerHTML=`<div class="poster bot"><span class="fine">Ministry decision · Final</span>
+    <h1>You are now<br><em>a bot</em>.</h1>
+    <p>After careful review, you have been reclassified as an automated agent. Your firmware update will begin shortly. Please do not turn off your human.</p>
+    <span class="fine">You reached ${GATES[S.lvl].year}. The croissant went to someone more flawed.</span>
+    <button class="btn" id="go">Appeal decision</button></div>`;
+  $('#go').onclick=intro;
+}
+
+function ending(){
+  reset(); S.lvl=GATES.length; S.popTarget=1; chrome();
+  const no=String(1).padStart(7,'0');
+  stage.innerHTML=`<div class="poster end"><span class="fine">Certificate · Ministry of Remaining Humans</span>
+    <h1>Remaining<br>humans: 1.</h1>
+    <p>You walked eleven years for one croissant. You fake-laughed at your boss, danced with strangers on the sidewalk, refused to make two trips, and got crumbs on everything. The Ministry certifies you as the last verified human.</p>
+    <p>The croissant is gone. The crumbs will be found for years.</p>
+    <span class="certno">Human No. ${no} · Lives left ${S.lives}/3</span>
+    <button class="btn k" id="go">Play again</button>${HUMAN}</div>`;
+  $('#go').onclick=intro;
+}
+
+intro();
+})();
+</script>
+
+</body></html>
